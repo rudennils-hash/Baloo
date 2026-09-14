@@ -1,0 +1,46 @@
+{
+	# Global options
+	email din@email.se
+	acme_ca https://acme-v02.api.letsencrypt.org/directory
+}
+
+# HTTP → HTTPS redirect
+:80 {
+	redir https://{host}{uri} permanent
+}
+
+# code-server (VS Code i webbläsaren)
+code-server.${DOMAIN} {
+	reverse_proxy code-server:8080
+	encode gzip
+}
+
+# Gitea
+gitea.${DOMAIN} {
+	reverse_proxy gitea:3000
+	encode gzip
+}
+
+# MinIO
+minio.${DOMAIN} {
+	reverse_proxy minio:9001
+	encode gzip
+}
+
+# The Lounge
+chat.${DOMAIN} {
+	reverse_proxy thelounge:9000
+	encode gzip
+}
+
+# Portainer
+portainer.${DOMAIN} {
+	reverse_proxy portainer:9443
+	encode gzip
+}
+
+# Grafana
+grafana.${DOMAIN} {
+	reverse_proxy grafana:3000
+	encode gzip
+}

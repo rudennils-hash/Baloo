@@ -1,0 +1,1 @@
+{"name":"baloo-electron","version":"1.0.0","description":"Baloo texthanteringsverktyg","main":"dist/main.js","scripts":{"build":"tsc","start":"electron ."},"devDependencies":{"electron":"^44.3.0","typescript":"^5.5.0"}}

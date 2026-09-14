@@ -1,0 +1,41 @@
+# Baloo-safety Module Overview
+
+## Files Created
+
+- **package.json** – defines module metadata, dependencies (bcryptjs, jsonwebtoken) and dev dependency (typescript). Status: completed.
+- **tsconfig.json** – TypeScript configuration for compilation to ./dist. Status: completed.
+- **src/index.ts** – barrel file re‑exporting all public classes and interfaces. Status: completed.
+- **src/authService.ts** – handles user registration, login, logout and JWT session management using bcrypt for password hashing. Status: completed.
+- **src/userStore.ts** – in‑memory UserStore implementation (mock) providing create, findById, findByEmail. Status: completed.
+- **src/sessionService.ts** – manages JWT session tokens with create, revoke and validation. Status: completed.
+- **src/providers/provider.ts** – defines the Provider interface. Status: completed.
+- **src/providers/ollamaProvider.ts** – stub implementation that pretends to call the Ollama API. Status: completed.
+- **src/providers/groqProvider.ts** – stub implementation for Groq provider. Status: completed.
+- **src/providers/openrouterProvider.ts** – stub implementation for OpenRouter provider. Status: completed.
+- **src/providers/openadapterProvider.ts** – stub implementation for OpenAdapter provider. Status: completed.
+- **src/defender.ts** – Defender class that sanitises prompts, records attacks and computes a protection level based on attack count. Status: completed.
+- **src/attackSimulator.ts** – simulates malicious prompts, calls provider.generate, and records attacks so Defender can react. Status: completed.
+- **run.ts** – simple entry script that wires the components together and runs a 5‑attempt attack simulation, printing the final protection level. Status: completed.
+- **summary.txt** – this file summarises the work done, status of each component and next steps. Status: completed.
+
+## What is Done
+
+- All core safety components are implemented and type‑checked.
+- Provider abstraction allows easy swapping of AI models (Ollama, Groq, OpenRouter, OpenAdapter).
+- Defender sanitises prompts and tracks attack attempts to raise protection level.
+- AttackSimulator demonstrates how an attacker could try to exploit the system and shows that Defender reacts.
+
+## Next Steps (to be completed)
+
+1. **Persist User & Session Data** – replace the in‑memory `MemoryUserStore` and `SessionService` with a real database (e.g., SQLite or PostgreSQL) and persistent session storage.
+2. **Real Provider Integration** – replace stub provider `generate` methods with actual API calls (Ollama, Groq, etc.) and handle authentication tokens.
+3. **Enhanced Defender** – add rate‑limiting per user/IP, more sophisticated prompt sanitisation (e.g., regex for SQLi, prompt injection patterns), and a configurable defense layer system.
+6. **Unit Tests** – write Jest tests for AuthService, Defender, and AttackSimulator to ensure behaviour and edge cases.
+6. **CI/CD Pipeline** – set up GitHub Actions to lint, test and build the module automatically.
+6. **Documentation** – generate API docs (e.g., TypeDoc) and a README with usage examples.
+
+## Dependencies
+
+- `bcryptjs` – password hashing.
+- `jsonwebtoken` – JWT handling.
+- `typescript` – compiler.

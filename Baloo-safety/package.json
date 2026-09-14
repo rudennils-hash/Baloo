@@ -1,0 +1,25 @@
+{
+  "name": "baloo-safety",
+  "version": "1.0.0",
+  "description": "Safety module for Baloo extension with auth, provider interface, defender, and attack simulation.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "node ./test/runAttackSimulation.ts",
+    "start": "node ./dist/index.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.5.1",
+    "@types/uuid": "^10.0.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}

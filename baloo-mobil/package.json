@@ -1,0 +1,12 @@
+{
+  "name": "baloo-mobile",
+  "version": "1.0.0",
+  "description": "Baloo text editor with color markings and cloud sync",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

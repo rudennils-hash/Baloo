@@ -1,0 +1,71 @@
+# Baloo-safety - Sammanställning
+
+## Syfte
+Detta paket är en självständig säkerhetsmodul för **Vgds Baloo**. Den hanterar:
+
+1. **Lösenordshantering** – salt + hash med scrypt (Node‑inbyggt) och brute‑force‑skydd.
+2. **Användarlagring** – in‑memory databas med testdata, låsning efter 5 misslyckade inloggningar.
+3. **Sessionshantering** – slumpmässiga token med 2‑timmars TTL.
+4. **Försvarssköld** – flera lager (L1‑input, L2‑auth, L3‑data, L4‑core) som kan blockera olika typer av attacker.
+5. **Attackmotor** – genererar och kör slumpmässiga attacker mot hela stacken, loggar resultat och låser konton vid brute‑force.
+6. **Hotlogg** – skriver attacker och försvarshändelser till en textfil för efteranalys.
+
+## Filstruktur
+
+```
+Baloo-safety/
+├─ package.json          # npm‑metadata, dev‑deps (typescript, @types/node)
+├─ tsconfig.json         # TypeScript‑kompilering (ES2020, commonjs, outDir: dist)
+├─ src/
+│  ├─ types.ts           # Typdefinitioner för användare, session, attack, försvar
+│  ├─ auth/
+│  │  ├─ passwordManager.ts   # Hashning med scrypt, timing‑safe verifiering
+│  │  └─ userStore.ts         # In‑memory user DB, låsning, testdata
+│  ├─ session/
+│  │  └─ sessionManager.ts    # Session‑token hantering (32‑byte hex, 2 h TTL)
+│  ├─ defense/
+│  │  ├─ defenseLayer.ts      # Bas‑klass för alla försvarslager
+│  │  ├─ inputSanitizer.ts    # L1 – skydd mot XSS, SQL‑injection m.m.
+│  │  ├─ authLayer.ts         # L2 – autentisering, brute‑force‑skydd
+│  │  ├─ dataProtection.ts    # L3 – skydd mot obehörig åtkomst
+│  │  └─ coreProtection.ts    # L4 – kärn‑skydd (loggar, men hindrar direkt åtkomst)
+│  ├─ defenseManager.ts       # Koordinerar alla försvarslager
+│  ├─ attack/
+│  │  └─ attackGenerator.ts   # Genererar random attacker, kör simulation
+│  └─ test/
+│     └─ runAttackSimulation.ts # Enkel körning av attack‑simulering
+└─ testUsers.ts               # Fiktiva användare för testläge
+```
+
+## Vad som är klart
+
+- **Lösenordshantering** (`PasswordManager`) – salt + hash, timing‑safe verifiering, lösenordspolicy (minst 8 tecken, siffror + bokstäver).
+- **Användarlagring** (`UserStore`) – in‑memory map, låsning efter 5 misslyckade försök, låsning i 15 min, testdata‑seedning.
+- **Sessionshantering** (`SessionManager`) – token‑generation, TTL‑rensning, auto‑cleanup‑loop.
+- **Försvarssköld** – fyra lager med tydliga ID:ar (`L1-input`, `L2-auth`, `L3-data`, `L4-core`), varje lager kan blockera attacker och logga dem.
+- **Attackmotor** (`AttackGenerator`) – slumpmässiga attacker (SQL‑i, XSS, prompt‑injection, brute‑force osv.), körs i simulation‑läge.
+- **Test‑script** (`runAttackSimulation.ts`) – kör 20 random attacker och visar resultat i konsolen.
+
+## Vad som fortfarande är pending
+
+- **Integration med Baloo‑extension** – koppla dessa säkerhetsmoduler till den befintliga `balooCore`‑klassen och webview‑panelen så att Baloo kan använda dem.
+- **Anpassningsbarhet för “bästa gratis modell”** – skapa en `ProviderManager` som kan byta mellan Ollama, Groq, OpenRouter osv. baserat på kostnad/prestanda.
+- **Fler‑användare & delning** – göra det möjligt för flera användare att ha egna konton och låga sessioner i samma process.
+- **CI‑/test‑integration** – lägga till Jest‑test för att verifiera låsning, hashning och attack‑blockering.
+- **Dokumentation & README** – förklara hur man kör simuleringen och integrerar modulen i huvudprojektet.
+
+## Nästa steg (förslag)
+
+1. **Koppla `UserStore` och `SessionManager` till `balooCore`** så att Baloo kan hantera inloggning och sessioner.
+2. **Implementera Provider‑gränssnitt** (t.ex. `IProvider`) och låt `BalooCore` välja den bästa gratis modellen dynamiskt.
+3. **Bygg UI‑komponenter** i webview‑panelen för att låta användaren se sin status, låsa/oslåna konto och se attack‑logg.
+4. **Skapa en CI‑pipeline** (t.ex. GitHub Actions) som kör `npm run test` och säkert att all säkerhetslogik fungerar.
+5. **Skriv en mer detaljerad README** som förklarar hur man använder modulens API i egen kod.
+
+## Sammanfattning av status
+
+- **Kärn‑säkerhet** är implementerad och körbar i test‑läge.
+- **Modulen är klar för integration** men kräver anslutning till huvud‑Baloo‑koden.
+- **Nästa steg** är att göra modulen lättillgänglig för Baloo‑extension och börja med UI‑ och provider‑integration.
+
+*Denna sammanställning är en översiktlig statusrapport för Baloo-safety‑modulen och visar vad som är färdig, vad som är på gång och vad som återstår.*

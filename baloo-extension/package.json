@@ -1,0 +1,54 @@
+{
+  "name": "baloo",
+  "displayName": "Baloo AI Assistant",
+  "description": "A VS Code extension that acts as both a language model and an agent, with pluggable providers.",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onCommand:baloo.ask",
+    "onCommand:baloo.showPanel"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "baloo.ask",
+        "title": "Baloo: Ask a question"
+      },
+      {
+        "command": "baloo.showPanel",
+        "title": "Baloo: Show Assistant Panel"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Baloo configuration",
+      "properties": {
+        "baloo.ollamaEndpoint": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "Endpoint for the Ollama API (free local LLM)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext .ts"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.x",
+    "typescript": "^5.4.0",
+    "eslint": "^8.57.0"
+  },
+  "dependencies": {
+    "axios": "^1.7.2"
+  }
+}

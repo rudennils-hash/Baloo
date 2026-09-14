@@ -1,0 +1,55 @@
+BALOO EXTENSION – SAMMANFATTNING OCH NÄSTA STEG
+------------------------------------------------
+
+VAD SOM REDAN ÄR GJORT:
+- En fristående VSCodium‑extension i mappen "baloo-extension".
+- package.json med namn "baloo", version 0.1.0, aktiveringskommandon och beroenden (axios, typescript).
+- tsconfig.json för TypeScript‑kompilering till dist/.
+- src/extension.ts – startar extension, öppnar en webview‑panel och hanterar kommandon.
+- src/balooCore.ts – koordinerar prompt‑hantering, planering och körning av steg.
+- src/tools/ – verktyg (FileSystemTool, CodeExecutorTool) och ToolRegistry som hanterar dem.
+- src/memory/memoryStore.ts – persistens för upplevelser i memory.json.
+- src/providers/ollamaProvider.ts – wrapper runt Ollama‑API:t (gratis, lokal).
+- src/selfBuilder.ts – läser egen kod, analyserar och föreslår förbättringar.
+- src/planner/planner.ts – skapar planer utifrån prompts, upptäcker nödvändiga verktyg och inkluderar själv‑förbättrings‑steg.
+- Media‑fil (HTML‑panel) som visar en textruta, en "+"‑knappar för att lägga till provider och skickar meddelanden till extension‑koden.
+
+NÄSTA STEG FÖR MULTIPLATSFUNKTIONALITET OCH ANVÄNDARSTÖD:
+1. Multiplattformskompatibilitet
+   • Håll koden plattform‑oberoende (inga OS‑specifika anrop).
+   • För desktop‑körning används Electron‑fönstret; för mobil kan man använda en Capacitor‑baserad wrapper som visar samma webview.
+   • Säkerställ att alla UI‑element (panel, knappar) fungerar i både breda och smala skärmar.
+
+2. Användar‑ och installationshantering
+   • Varje användare har sin egen konfigurations‑ och data‑lagring (globalState/UserDataStore) så att val av extensions skiljer sig åt.
+   • Skapa en "Extension Manager" i webview‑panelen som visar en lista av installerade extensions med checkboxar.
+   • Implementera en funktion som kan ladda ner en .vsix‑fil och installera den i Vdgs‑appens extensions‑hanterare.
+
+3. Paketering för distribution
+   • Lägg till en "build"‑script som kompilerar TypeScript och zippar dist/‑mappen till en .vsix‑fil.
+   • Skapa en enkel webbsida (eller en sida i Vdgs‑appen) där användaren kan välja vilka extensions som ska laddas ner.
+   • När användaren klickar "Ladda ner" får hen en .vsix‑fil som Vdgs‑appens app kan installera direkt (utan att behöva gå via marknadsplatsen).
+
+4. Användar‑specifik lagring
+   • Använd vscode.workspace.getConfiguration('baloo', vscode.ConfigurationTarget.User) för per‑användar inställningar.
+   • Använd context.globalState.update('balooInstalledExtensions', array, vscode.UserDataStoreState) för att minnas vilka extensions som är installerade för varje användare.
+   • Vid start av extensionen läs in dessa inställningar och aktivera/koppla de valda provider‑na.
+
+5. UI‑förändringar för app‑val
+   • Lägg till en sektion i webview‑panelen med rubrik "Välj extensions" och en lista/checkbox‑gränssnitt.
+   • Varje valning kan spara valutan i globalState och/eller i user‑konfigurationen.
+   • När Vdgs‑appens användare startas, läs listan över installerade extensions från user‑data och visa den i en separat "Extension Manager"-sida.
+
+6. Testning och CI
+   • Skriv enhets‑ och integrations‑tester för Planner, ToolRegistry och SelfBuilder med Jest.
+   • Ställ in en CI‑pipeline (t.ex. GitHub Actions) som kör npm run compile och testerna vid varje push.
+
+7. Dokumentation
+   • Lägg till en README.md som beskriver hur man bygger, installerar och använder extensionen.
+   • Skapa en kort guide för Vdgs‑appens nedladdnings‑ och installationsflöde.
+
+Sammanfattning
+-------------
+Vi har byggt en grundläggande men fullt fungerande Baloo‑agent som kan köras i en VSCodium‑extension, med stöd för fler‑användare och en väg att distribuera som en .vsix‑fil som laddas ner via Vdgs‑appens extensions‑hanterare. De kommande stegen fokuserar på att göra extensionen plattform‑oberoende, hantera flera användare, och underlätta nedladdning/installation av extensioner i Vdgs‑appens extensions‑hanterare.
+
+```

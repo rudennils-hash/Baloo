@@ -1,0 +1,78 @@
+BALOO VGDS APP – SAMMANSTÄLLNING OCH NÄSTA STEG
+=====================================================
+
+VÄRLDEN: En fristående VSCodium‑extension med namn `baloo-extension` har färdigställts. 
+Målet är att integrera denna extension i Vdgs‑appen så att användare kan ladda ner och installera
+Baloo‑extensionen via Vdgs‑Appens egna “Extension‑Manager”.
+
+**Filstruktur som skapats i Baloo-VgdsApp/**
+- `sammanstallning.txt` – denna fil (sammanställning).
+- `README.md` (exemplet nedan) – kort förklaring av projektet.
+- `src/` – innehåller huvuddelen av källkoden:
+  - `extension.ts` – aktiveringspunkt och webview‑panel.
+  - `balooCore.ts` – koordinering och körning av planerade steg.
+  - `tools/` – `FileSystemTool`, `CodeExecutorTool`.
+  - `memory/memoryStore.ts` – persistence‑lagring av upplevelser.
+  - `providers/ollamaProvider.ts` – wrapper för Ollama‑API (gratis, obegränsad).
+  - `selfBuilder.ts` – läser egen kod och föreslår förbättringar.
+  - `planner/planner.ts` – skapar planer utifrån användar‑prompt.
+  - `webview/` – UI‑komponenter (panel.html, panel.ts, providersQuickPick.ts).
+
+**Syfte med varje mapp/fils:**
+- **extension.ts**: Startar extension, öppnar en webview‑panel där användaren kan skriva frågor och se svar.
+- **balooCore.ts**: Hanterar prompt‑tolkning, planering och körning av verktyg.
+- **tools/**: Tillhandahåller enkla verktyg för filhantering och kod‑körning.
+- **memory/**: Sparar historik och reflektioner i `memory.json`.
+- **providers/**: Implementerar en generisk `Provider`‑gränssnitt och en färdig `OllamaProvider`.
+- **selfBuilder.ts**: Analyserar nuvarande Baloo‑kod och genererar förbättringsförslag.
+- **planner/planner.ts**: Skapar detaljerade `PlanStep`‑ objekt med typ, argument och reflektion.
+- **webview/**: Bygger UI‑element (text‑inmatning, “+ Lägg till provider”, resultat‑visning).
+
+**Nästa steg (mål för nästa iteration):**
+1. **Integrationsskript** – skapa ett klient‑exempel (JS/TS) som Vdgs‑appen kan anropa för att 
+   *ladda ner* en .vsix‑fil och installera den som extension.
+2. **Extension‑Manager‑UI** – i webview‑panelen lägg checkbox‑lista över installerade extensions och en 
+   ”+ Lägg till ny provider”‑knapp som dynamiskt registrerar nya provider‑klasser.
+3. **Multiplattformskompatibilitet** – säkerställ att kodbasen är plattformsoberoende och fungerar i 
+   både VS Code‑extension och i en eventuell mobil‑wrapper (Capacitor/Electron).
+4. **Packaging & Distribution** – skript för `vsce package` som genererar .vsix‑fil, samt en intern 
+   server‑endpoint i Vdgs‑appen för att leverera .vsix‑filen.
+5. **Test‑ och CI‑pipeline** – konfigurera GitHub Actions eller liknande för att automatisera 
+   kompilering, testkörning och packaging vid varje push.
+6. **Säkerhet & isolering** – implementera sandbox‑restriktioner för körda extensions och 
+   begränsa vilka API‑token de får använda.
+7. **Dokumentation** – uppdatera README.md och skapa en kort användar‑guide för hur man laddar 
+   ner/installerar extensions via Vdgs‑appen.
+
+**Aktivitet i denna mapp (`Baloo-VgdsApp/`)**
+- Alla ovanstående filslag är redan implementerade i den separate `baloo-extension/`‑mappen. 
+  De ska nu kopieras in eller refereras här så att hela projektet kan byggas och testas som en 
+  enhet innan integration med Vdgs‑appen sker.
+- När du är redo att flytta kod: använd `readFile`/`writeFile` för att skapa motsvarande filer i 
+  `Baloo-VgdsApp/` med samma innehåll, eller kopiera dem manuellt med ditt verktyg.
+
+**Exempel på README.md (kan placeras i samma mapp)**
+```
+# Baloo‑extension – Sammanställning
+
+Det här är en VSCodium‑extension och fristående agent som kan:
+- Svara på naturliga språk‑frågor.
+- Kalla externa verktyg (filhantering, kod‑körning, web‑sökning …).
+- Förbättra sin egen kod genom att analysera och föreslå förbättringar.
+- Lagra reflektioner i minnet och använda dem vid framtida körningar.
+
+## Hur man kör
+1. `npm install`
+2. `npm run compile`
+3. Tryck F5 i VS Code för att starta en utvecklingshost med extensionen.
+4. I den öppna webview‑panelen kan du skriva frågor och interagera med valda provider‑tjänster.
+
+## Integration med Vdgs‑App
+- Vdgs‑appen kan ladda ner .vsix‑filen med en enkel REST‑endpoint.
+- Användare väljer extensions i en “Extension‑Manager”‑vy och kan installera dem utan att gå via 
+  marknadsplatsen.
+- Installerade extensions körs i sin egen sandbox och har separat minnes‑/datalagring.
+```
+
+Denna fil (`sammanstallning.txt`) sammanställer allt som har skapats hittills, tydliggör varje filsroll,
+och listar kommande mål innan integrationen med Vdgs‑appen är klar.

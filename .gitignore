@@ -1,0 +1,30 @@
+# Baloo – filer som INTE ska upp till molnet
+
+# Node (installeras om automatiskt på servern – aldrig att skicka)
+node_modules/
+
+# Byggutdata (byggs om automatiskt)
+dist/
+out/
+build/
+release/
+
+# Loggar och tillfälligt
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Hemligheter – API-nycklar ska ALDRIG in i repot (läggs som secrets i GitHub istället)
+.env
+.env.*
+*.key
+secrets/
+
+# Stora lokala filer
+# mastertext.txt (56 MB chatthistorik) blir för stor för git – den stannar lokalt som referens
+mastertext.txt
+
+# Gamla flyttkit-paket
+oracle-move-kit/baloo-backup-*.tar.gz
+*.tar.gz

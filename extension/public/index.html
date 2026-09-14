@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <title>Baloo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 2fr 1fr 1.5fr;
+      grid-template-rows: auto 1fr auto;
+      gap: 8px;
+      padding: 8px;
+      background: #1e1e2e;
+      color: #cdd6f4;
+    }
+    header {
+      grid-column: 1 / 4;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 10px;
+      background: #313244;
+      border-radius: 8px;
+    }
+    header h1 { font-size: 18px; margin-right: auto; }
+    #stats { font-size: 12px; opacity: 0.8; }
+    button {
+      padding: 6px 16px;
+      border: none;
+      border-radius: 6px;
+      background: #a6e3a1;
+      color: #1e1e2e;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { filter: brightness(1.1); }
+    button.danger { background: #f38ba8; }
+    button.color-picker { background: #89b4fa; }
+    button.tab { background: #45475a; color: #cdd6f4; }
+    button.tab.active { background: #89b4fa; color: #1e1e2e; }
+
+    .pane {
+      overflow: auto;
+      background: #181825;
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .pane h2 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #89b4fa;
+      margin-bottom: 8px;
+      position: sticky;
+      top: 0;
+      background: #181825;
+    }
+    #mastertext div {
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    #mastertext div:hover { background: #313244; }
+    #mastertext div.mark-delete { background: rgba(243, 139, 168, 0.35); text-decoration: line-through; }
+    #mastertext div.mark-keep   { background: rgba(166, 227, 161, 0.30); }
+    #mastertext div.mark-blue   { background: rgba(137, 180, 244, 0.35); }
+    #mastertext div.mark-orange { background: rgba(255, 165, 0, 0.35); }
+    #mastertext div.mark-yellow { background: rgba(249, 226, 175, 0.35); }
+    #mastertext div.mark-purple { background: rgba(203, 166, 247, 0.35); }
+    #mastertext div.mark-cyan   { background: rgba(148, 226, 213, 0.35); }
+    #mastertext div.mark-pink   { background: rgba(245, 194, 231, 0.35); }
+    #mastertext div.selected {
+      outline: 2px solid #ffffff;
+      outline-offset: -2px;
+    }
+
+    /* Context menu */
+    #contextMenu {
+      display: none;
+      position: fixed;
+      z-index: 100;
+      min-width: 240px;
+      background: #313244;
+      border: 1px solid #45475a;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      padding: 6px;
+    }
+    .ctx-item {
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .ctx-item:hover { background: #45475a; }
+    .ctx-swatch { width: 18px; height: 18px; border-radius: 4px; border: 1px solid #cdd6f4; }
+    .ctx-meta { font-size: 11px; opacity: 0.8; margin-left: auto; color: #cdd6f4; }
+    .ctx-title { font-weight: bold; }
+    .ctx-sub { font-size: 11px; opacity: 0.8; }
+    .ctx-sep { height: 1px; background: #45475a; margin: 4px 0; }
+
+    /* Palette */
+    #palette {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-start;
+      margin-top: 8px;
+    }
+    .swatch {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      font-size: 9px;
+      color: #1e1e2e;
+      font-weight: bold;
+      text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+      padding: 2px;
+      word-break: break-word;
+      text-align: center;
+    }
+    .swatch:hover { transform: scale(1.08); }
+    .swatch.active { border: 3px solid #ffffff; }
+    #currentColorSwatch {
+      width: 46px;
+      height: 46px;
+      border-radius: 8px;
+      border: 2px solid #cdd6f4;
+    }
+    .palette-label { font-size: 11px; opacity: 0.7; margin-bottom: 2px; }
+
+    /* Chat */
+    #chat { display: flex; flex-direction: column; }
+    #chatLog { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+    .msg { padding: 8px 10px; border-radius: 10px; background: #313244; max-width: 95%; }
+    .msg.baloo { align-self: flex-start; background: #45475a; }
+    .spinner {
+      width: 20px; height: 20px;
+      border: 3px solid #89b4fa;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #spinnerBox { display: none; align-items: center; padding: 8px; color: #89b4fa; font-style: italic; }
+    #thought {
+      margin-top: 8px;
+      padding: 10px;
+      background: #313244;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+
+    footer {
+      grid-column: 1 / 4;
+      display: flex;
+      gap: 8px;
+      padding: 6px;
+      background: #313244;
+      border-radius: 8px;
+      font-size: 12px;
+      align-items: center;
+    }
+    footer .legend span { margin-right: 14px; }
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+    .dot.red { background: #f38ba8; }
+    .dot.green { background: #a6e3a1; }
+    .dot.orange { background: #ffa500; }
+    .dot.blue { background: #89b4fa; }
+    .dot.yellow { background: #f9e2af; }
+    .dot.purple { background: #cba6f7; }
+
+    /* Overview */
+    #overviewList { display: flex; flex-direction: column; gap: 6px; }
+    .overview-item {
+      background: #11111b;
+      border: 1px solid #45475a;
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .overview-item:hover { background: #1e1e2e; }
+    .overview-title { font-weight: bold; color: #cdd6f4; }
+    .overview-meta { font-size: 11px; color: #a6adc8; margin-top: 2px; }
+    #searchInput {
+      width: 100%;
+      padding: 6px;
+      background: #11111b;
+      color: #cdd6f4;
+      border: 1px solid #45475a;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    .modal {
+      background: #313244;
+      border-radius: 12px;
+      padding: 14px;
+      width: 420px;
+      max-width: 90%;
+    }
+    .modal h3 { margin-bottom: 8px; }
+    .modal label { font-size: 12px; opacity: 0.9; }
+    .modal input, .modal textarea {
+      width: 100%;
+      padding: 6px;
+      background: #181825;
+      color: #cdd6f4;
+      border: 1px solid #45475a;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🐻 Baloo</h1>
+    <span id="stats">Laddar mastertext…</span>
+    <button id="btnClean" class="danger">🧹 Rensa markerade</button>
+    <button id="btnSave">💾 Spara</button>
+    <button id="btnProcess" class="danger">⚙️ Processa</button>
+    <button id="btnOverview">📋 Översikt</button>
+  </header>
+
+  <div class="pane" id="mastertextPane">
+    <h2>Mastertext</h2>
+    <input id="searchInput" type="text" placeholder="🔍 Sök i texten…">
+    <div id="mastertext"></div>
+  </div>
+
+  <div class="pane" id="chat">
+    <h2>Chat</h2>
+    <div id="chatLog"></div>
+    <div id="spinnerBox"><span class="spinner"></span><span id="spinnerText">Baloo tänker…</span></div>
+    <div id="thought">💭 Högerklicka på markerad text för att välja färg och lägga till beskrivning.</div>
+  </div>
+
+  <div class="pane" id="workspacePane">
+    <h2>Workspace</h2>
+    <div id="workspace">Ingen output ännu.</div>
+
+    <h2 style="margin-top:16px;">Färgpalett 🔽 Välj färg</h2>
+    <div style="display:flex; gap:10px; align-items:flex-start; margin-bottom:10px;">
+      <div id="currentColorSwatch"></div>
+      <div style="flex:1;">
+        <div class="palette-label">Vald färg (klicka nedan för att byta)</div>
+        <input type="text" id="colorDesc" placeholder="Beskrivning av färgen…" style="width:100%; padding:5px; border-radius:6px; border:1px solid #45475a; background:#11111b; color:#cdd6f4;">
+      </div>
+    </div>
+    <div id="palette"></div>
+    <div style="margin-top:10px; font-size:12px; opacity:0.8;" id="selectedInfo">Ingen färg vald. Klicka på en färgklick ovan.</div>
+
+    <h2 style="margin-top:16px;">Lärda färger</h2>
+    <div id="learnedColorsList" style="display:flex; flex-direction:column; gap:6px;"></div>
+    <button id="btnAddColor" class="color-picker" style="margin-top:8px;">➕ Lägg till egen färg</button>
+  </div>
+
+  <footer>
+    <div class="legend">
+      <span><span class="dot red"></span>röd = ta bort</span>
+      <span><span class="dot green"></span>grön = behåll</span>
+      <span><span class="dot orange"></span>orange = städa/rensning</span>
+      <span><span class="dot blue"></span>blå = baloo-fil</span>
+      <span><span class="dot yellow"></span>gul = special</span>
+      <span><span class="dot purple"></span>lila = kommentar</span>
+    </div>
+    <span id="saveStatus" style="margin-left:auto; opacity:0.7;"></span>
+  </footer>
+
+  <!-- Context menu -->
+  <div id="contextMenu">
+    <div id="ctxItems"></div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" id="ctxAddColor">
+      <span class="ctx-title">➕ Lägg till egen färg</span>
+      <span class="ctx-sub">Välj färg + rubrik + info</span>
+    </div>
+  </div>
+
+  <!-- Add color modal -->
+  <div id="addColorModal" class="modal-overlay">
+    <div class="modal">
+      <h3>Lägg till egen färg</h3>
+      <label>Rubrik (t.ex. Ta bort)</label>
+      <input id="newColorName" type="text" placeholder="Rubrik…">
+      <label>Beskrivning (kort)</label>
+      <input id="newColorDesc" type="text" placeholder="Beskrivning…">
+      <label>Extra info / hjälptext</label>
+      <textarea id="newColorHelp" rows="3" placeholder="Mer info om vad denna färg gör…"></textarea>
+      <label>Färg</label>
+      <input id="newColorHex" type="color" value="#ff00ff">
+      <div class="modal-actions">
+        <button id="btnCancelColor">Avbryt</button>
+        <button id="btnSaveColor" class="color-picker">Spara</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overview modal -->
+  <div id="overviewModal" class="modal-overlay">
+    <div class="modal" style="width: 640px;">
+      <h3>Översikt av mastertext</h3>
+      <input id="searchOverview" type="text" placeholder="🔍 Sök i översikten…" style="width:100%; padding:6px; background:#181825; color:#cdd6f4; border:1px solid #45475a; border-radius:6px; margin-bottom:8px;">
+      <div id="overviewList" style="max-height: 60vh; overflow:auto;"></div>
+      <div class="modal-actions">
+        <button id="btnCloseOverview">Stäng</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const funnyComments = [
+      'Baloo borstar texten med en gigantisk filt… 🧸',
+      'Sorterar rader som en björn sorterar bin… 🍯',
+      'Jag hittade en rad som luktade gamla ümlaut. Tar bort den.',
+      'Baloo dansar samba medan raderna snurrar i ring… 💃',
+      'En rad sa "Ta bort mig!" — så Baloo tog den på allvar. 🚫',
+      'Mer honung till de rader som får stanna kvar. 🍯',
+      'Baloo-städkvack: allt blir bättre med lite grubbel. 🌀'
+    ];
+
+    const PALETTE = [
+      { name: 'radera',    hex: '#f38ba8', default: 'ta bort' },
+      { name: 'stada',     hex: '#a6e3a1', default: 'städa/rensning' },
+      { name: 'kommentar', hex: '#cba6f7', default: 'kommentar' },
+      { name: 'baloo',     hex: '#89b4fa', default: 'extrahera till fil' },
+      { name: 'special',   hex: '#f9e2af', default: 'speciell' }
+    ];
+
+    let lines = [];
+    let colorMarkings = {}; // lineNumber -> { color, description, help }
+    let selectedColor = 'radera';
+    let learnedColors = {};
+    let learnedRules = {};
+    let selection = { start: -1, end: -1 };
+    let chunks = [];
+
+    const $ = id => document.getElementById(id);
+    const $mastertext = $('mastertext');
+    const chatLog = $('chatLog');
+    const stats = $('stats');
+    const spinnerBox = $('spinnerBox');
+    const spinnerText = $('spinnerText');
+    const thought = $('thought');
+    const workspace = $('workspace');
+    const saveStatus = $('saveStatus');
+    const colorDescInput = $('colorDesc');
+    const paletteEl = $('palette');
+    const currentSwatch = $('currentColorSwatch');
+    const selectedInfo = $('selectedInfo');
+    const contextMenu = $('contextMenu');
+    const ctxItems = $('ctxItems');
+    const searchInput = $('searchInput');
+
+    function chat(text) {
+      const d = document.createElement('div');
+      d.className = 'msg baloo';
+      d.textContent = 'Baloo: ' + text;
+      chatLog.appendChild(d);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+    function showSpinner(t) { spinnerText.textContent = t || 'Baloo tänker…'; spinnerBox.style.display = 'flex'; }
+    function hideSpinner() { spinnerBox.style.display = 'none'; }
+    function setThought(t) { thought.textContent = '💭 ' + t; }
+    function randomFunny() { return funnyComments[Math.floor(Math.random() * funnyComments.length)]; }
+
+    function ensureLearnedColors() {
+      if (!learnedColors || Object.keys(learnedColors).length === 0) {
+        learnedColors = {
+          radera: { name: 'Radera', description: 'Ta bort denna rad', help: 'Radera raden helt', color: '#f38ba8', createdAt: new Date().toISOString() },
+          stada: { name: 'Städa/Rensa', description: 'Ta bort skräp/kolumner', help: 'Städar texten', color: '#a6e3a1', createdAt: new Date().toISOString() },
+          kommentar: { name: 'Kommentar', description: 'Kommentar/funktionsbeskrivning', help: 'Markerar kommentarer', color: '#cba6f7', createdAt: new Date().toISOString() },
+          baloo: { name: 'Baloo-fil', description: 'Hör till Baloo-kodbas', help: 'Markerar Baloo-relevanta rader', color: '#89b4fa', createdAt: new Date().toISOString() },
+          special: { name: 'Special', description: 'Särskild markering', help: 'Används för specialfall', color: '#f9e2af', createdAt: new Date().toISOString() },
+        };
+      }
+    }
+
+    function buildPalette() {
+      paletteEl.innerHTML = '';
+      const keys = Object.keys(learnedColors);
+      if (keys.length === 0) ensureLearnedColors();
+      keys.forEach(k => {
+        const c = learnedColors[k];
+        const sw = document.createElement('div');
+        sw.className = 'swatch' + (c.name === learnedColors[selectedColor]?.name ? ' active' : '');
+        sw.style.background = c.color;
+        sw.title = c.name;
+        sw.textContent = c.name;
+        sw.addEventListener('click', () => {
+          selectedColor = k;
+          selectedInfo.textContent = 'Vald färg: ' + c.name + ' – ' + (c.description || c.default || '');
+          currentSwatch.style.background = c.color;
+          buildPalette();
+          setThought('Valde ' + c.name + '. Markera rader med högerklick för meny. 🎨');
+          chat('Valde färgen ' + c.name + (c.description ? ' – ' + c.description : '') + '.');
+        });
+        paletteEl.appendChild(sw);
+      });
+    }
+
+    function markRange(start, end, colorKey, description, help) {
+      const a = Math.min(start, end);
+      const b = Math.max(start, end);
+      for (let i = a; i <= b; i++) {
+        colorMarkings[i] = { color: colorKey, description: description || '', help: help || '' };
+      }
+      render();
+      updateStats();
+      setThought('Markerade ' + ((b - a) + 1) + ' rader med ' + (learnedColors[colorKey]?.name || colorKey) + '. ' + randomFunny());
+      chat('Markerade rad ' + (a + 1) + '–' + (b + 1) + ' med ' + (learnedColors[colorKey]?.name || colorKey) + '.');
+    }
+
+    function clearRange(start, end) {
+      const a = Math.min(start, end);
+      const b = Math.max(start, end);
+      for (let i = a; i <= b; i++) delete colorMarkings[i];
+      render();
+      updateStats();
+    }
+
+    function render() {
+      $mastertext.innerHTML = '';
+      const frag = document.createDocumentFragment();
+      lines.forEach((line, i) => {
+        const d = document.createElement('div');
+        d.textContent = line || ' ';
+        const mark = colorMarkings[i];
+        if (mark) {
+          d.classList.add('mark-' + mark.color);
+          d.title = (mark.color || '') + (mark.description ? ' — ' + mark.description : '');
+        }
+        d.addEventListener('click', () => {
+          // shift+click = clear single
+          if (event.shiftKey) {
+            delete colorMarkings[i];
+            render();
+            updateStats();
+            return;
+          }
+          // left-click: just select single for context menu
+          selection = { start: i, end: i };
+        });
+        frag.appendChild(d);
+      });
+      $mastertext.appendChild(frag);
+      updateStats();
+    }
+
+    function updateStats() {
+      const counts = {};
+      Object.values(colorMarkings).forEach(m => counts[m.color] = (counts[m.color] || 0) + 1);
+      let s = lines.length + ' rader | ';
+      Object.keys(counts).forEach(c => s += c + ':' + counts[c] + ' ');
+      stats.textContent = s;
+    }
+
+    function renderContextMenu(x, y, start, end) {
+      ctxItems.innerHTML = '';
+      const keys = Object.keys(learnedColors);
+      keys.forEach(k => {
+        const c = learnedColors[k];
+        const item = document.createElement('div');
+        item.className = 'ctx-item';
+        item.innerHTML = `
+          <div class="ctx-swatch" style="background:${c.color};"></div>
+          <div>
+            <div class="ctx-title">${c.name}</div>
+            <div class="ctx-sub">${c.description || ''}</div>
+          </div>
+          <div class="ctx-meta">${c.help || ''}</div>
+        `;
+        item.addEventListener('click', () => {
+          markRange(start, end, k, c.description || '', c.help || '');
+          contextMenu.style.display = 'none';
+        });
+        ctxItems.appendChild(item);
+      });
+      contextMenu.style.display = 'block';
+      contextMenu.style.left = Math.min(x, window.innerWidth - 260) + 'px';
+      contextMenu.style.top = Math.min(y, window.innerHeight - 220) + 'px';
+      selection = { start, end };
+    }
+
+    document.addEventListener('mousedown', (e) => {
+      if (e.button === 0) {
+        contextMenu.style.display = 'none';
+      }
+    });
+
+    $mastertext.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (lines.length === 0) return;
+      const target = e.target;
+      if (!(target instanceof HTMLElement)) return;
+      const divs = Array.from($mastertext.querySelectorAll('div'));
+      const idx = divs.indexOf(target);
+      if (idx < 0) return;
+      if (selection.start >= 0 && selection.end >= 0 && (idx >= selection.start && idx <= selection.end)) {
+        renderContextMenu(e.clientX, e.clientY, selection.start, selection.end);
+      } else {
+        renderContextMenu(e.clientX, e.clientY, idx, idx);
+      }
+    });
+
+    $('btnAddColor').addEventListener('click', () => {
+      $('addColorModal').style.display = 'flex';
+    });
+    $('ctxAddColor').addEventListener('click', () => {
+      contextMenu.style.display = 'none';
+      $('addColorModal').style.display = 'flex';
+    });
+    $('btnCancelColor').addEventListener('click', () => {
+      $('addColorModal').style.display = 'none';
+    });
+    $('btnSaveColor').addEventListener('click', async () => {
+      const name = $('newColorName').value.trim();
+      const desc = $('newColorDesc').value.trim();
+      const help = $('newColorHelp').value.trim();
+      const hex = $('newColorHex').value;
+      if (!name) { alert('Ge en rubrik.'); return; }
+      const key = name.toLowerCase();
+      learnedColors[key] = { name, description: desc, help, color: hex, createdAt: new Date().toISOString() };
+      await window.electron.invoke('baloo.saveLearnedColors', learnedColors);
+      buildPalette();
+      selectedColor = key;
+      currentSwatch.style.background = hex;
+      selectedInfo.textContent = 'Vald färg: ' + name + ' – ' + desc;
+      $('addColorModal').style.display = 'none';
+      chat('Lade till egen färg: ' + name + '.');
+      setThought('Ny färg sparad. Högerklicka på texten för att använda den. 🎨');
+    });
+
+    async function loadData() {
+      showSpinner('Hämtar mastertext.txt…');
+      try {
+        lines = await window.electron.invoke('baloo.loadText');
+        chunks = await window.electron.invoke('baloo.chunks', lines);
+        learnedRules = await window.electron.invoke('baloo.loadLearnedRules');
+        learnedColors = await window.electron.invoke('baloo.loadLearnedColors');
+        ensureLearnedColors();
+        chat('Hej! Jag läste ' + lines.length + ' rader. Högerklicka på markerad text för meny. Välj färg i paletten för att byta.');
+      } catch (e) {
+        chat('Kunde inte läsa mastertext: ' + e.message);
+      }
+      hideSpinner();
+      buildPalette();
+      render();
+      updateStats();
+      renderLearnedColors();
+    }
+
+    async function saveData() {
+      showSpinner('Sparar…');
+      try {
+        await window.electron.invoke('baloo.saveText', lines);
+        saveStatus.textContent = '💾 Sparad ' + new Date().toLocaleTimeString();
+        chat('Sparad! Nu är mastertext ren som en björn efter bad. 🛁');
+      } catch (e) { chat('Kunde inte spara: ' + e.message); }
+      hideSpinner();
+    }
+
+    async function processAll() {
+      showSpinner('Processar hela texten på en gång…');
+      chat('Processar allt i ett enda block — inga småbitar här! 🧸');
+      try {
+        const res = await window.electron.invoke('baloo.processNextBlock', lines);
+        lines = res.lines;
+        workspace.textContent = res.report;
+        chat(res.report);
+      } catch (e) { chat('Fel vid processning: ' + e.message); }
+      hideSpinner();
+      render();
+    }
+
+    async function showOverview() {
+      showSpinner('Genererar översikt…');
+      try {
+        const items = await window.electron.invoke('baloo.analyze', lines);
+        const list = $('overviewList');
+        list.innerHTML = '';
+        const frag = document.createDocumentFragment();
+        items.forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'overview-item';
+          row.innerHTML = `<div class="overview-title">${escapeHtml(item.title)}</div>
+                           <div class="overview-meta">Rad ${item.lineNumber}</div>`;
+          row.addEventListener('click', () => {
+            // scroll mastertext to line
+            const target = $mastertext.children[item.lineNumber - 1];
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          });
+          frag.appendChild(row);
+        });
+        list.appendChild(frag);
+        $('overviewModal').style.display = 'flex';
+      } catch (e) {
+        chat('Kunde inte bygga översikt: ' + e.message);
+      }
+      hideSpinner();
+    }
+
+    function renderLearnedColors() {
+      const list = $('learnedColorsList');
+      list.innerHTML = '';
+      Object.keys(learnedColors).forEach(k => {
+        const c = learnedColors[k];
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.gap = '10px';
+        row.style.alignItems = 'center';
+        row.innerHTML = `
+          <div style="width:24px;height:24px;border-radius:6px;background:${c.color};"></div>
+          <div>
+            <div style="font-weight:bold; color:#cdd6f4;">${c.name}</div>
+            <div style="font-size:11px; opacity:0.8; color:#a6adc8;">${c.description || ''}</div>
+            <div style="font-size:11px; opacity:0.8; color:#a6adc8;">${c.help || ''}</div>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    $('btnSave').addEventListener('click', saveData);
+    $('btnProcess').addEventListener('click', processAll);
+    $('btnClean').addEventListener('click', () => {
+      const keep = [];
+      const removed = [];
+      lines.forEach((line, i) => {
+        if (colorMarkings[i] && colorMarkings[i].color === 'radera') removed.push(line);
+        else keep.push(line);
+      });
+      const removedCount = removed.length;
+      const newMarkings = {};
+      Object.keys(colorMarkings).forEach(k => {
+        const oldIdx = parseInt(k, 10);
+        if (oldIdx >= removedCount) newMarkings[oldIdx - removedCount] = colorMarkings[k];
+      });
+      colorMarkings = newMarkings;
+      lines = keep;
+      render();
+      chat('Städade bort ' + removedCount + ' röda rader. ' + randomFunny());
+    });
+
+    $('btnOverview').addEventListener('click', showOverview);
+    $('btnCloseOverview').addEventListener('click', () => $('overviewModal').style.display = 'none');
+
+    searchInput.addEventListener('input', (e) => {
+      const q = (e.target.value || '').trim().toLowerCase();
+      if (!q) { render(); return; }
+      const frag = document.createDocumentFragment();
+      $mastertext.innerHTML = '';
+      lines.forEach((line, i) => {
+        const d = document.createElement('div');
+        const text = line || ' ';
+        d.textContent = text;
+        if (text.toLowerCase().includes(q)) d.style.background = 'rgba(249, 226, 175, 0.35)';
+        d.addEventListener('click', () => {
+          selection = { start: i, end: i };
+        });
+        frag.appendChild(d);
+      });
+      $mastertext.appendChild(frag);
+    });
+
+    loadData();
+  </script>
+</body>
+</html>

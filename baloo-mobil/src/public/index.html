@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Baloo Mobile</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --panel: #181825;
+      --ink: #cdd6f4;
+      --accent: #89b4fa;
+      --good: #a6e3a1;
+      --danger: #f38ba8;
+      --muted: #a6adc8;
+      --card: #313244;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 8px;
+      padding: 8px;
+    }
+    header, footer { background: var(--card); border-radius: 8px; padding: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    header h1 { font-size: 16px; }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+    .pane { overflow: auto; background: var(--panel); border-radius: 8px; padding: 10px; }
+    .pane h2 { font-size: 13px; color: var(--accent); margin-bottom: 6px; }
+    #editor { white-space: pre-wrap; outline: none; line-height: 1.45; tab-size: 4; min-height: 320px; }
+    .mark-r { background: rgba(243,139,168,0.35); }
+    .mark-g { background: rgba(166,227,161,0.30); }
+    .mark-o { background: rgba(255,165,0,0.35); }
+    .mark-b { background: rgba(137,180,244,0.35); }
+    .mark-y { background: rgba(249,226,175,0.35); }
+    .mark-p { background: rgba(203,166,247,0.35); }
+    .mark-c { background: rgba(148,226,213,0.35); }
+    .mark-k { background: rgba(245,194,231,0.35); }
+    #status { font-size: 12px; color: var(--muted); }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .chip { padding: 6px 10px; border-radius: 999px; background: var(--card); border: 1px solid #45475a; cursor: pointer; user-select: none; }
+    .chip.on { outline: 2px solid #ffffff; }
+    button { padding: 8px 14px; border: none; border-radius: 6px; background: var(--good); color: #1e1e2e; font-weight: bold; cursor: pointer; }
+    button.danger { background: var(--danger); }
+    input[type="text"] { padding: 8px 10px; border-radius: 6px; border: 1px solid #45475a; background: #11111b; color: var(--ink); width: 100%; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🐻 Baloo Mobile</h1>
+    <div id="status" class="toolbar">Kopplar till mastertext…</div>
+    <div class="toolbar">
+      <button id="btnSave">💾 Spara</button>
+      <button id="btnReset" class="danger">Återställ lokalt</button>
+    </div>
+  </header>
+
+  <div class="pane">
+    <h2>Färgpalett</h2>
+    <input id="note" type="text" placeholder="Beskrivning för markeringen…" />
+    <div class="chips" id="palette"></div>
+    <div style="margin-top:8px; font-size:12px; color: var(--muted);" id="paletteHelp">Klicka en färg, välj sedan text, sen spara.</div>
+  </div>
+
+  <div class="pane">
+    <h2>Mastertext</h2>
+    <div id="editor" contenteditable="true">Laddar…</div>
+  </div>
+
+  <footer>
+    <span>Autosave: <b id="autosaveStatus">av</b></span>
+    <span id="lastSaved"></span>
+  </footer>
+
+  <script>
+    const COLORS = [
+      { key: 'r', name: 'röd' },
+      { key: 'g', name: 'grön' },
+      { key: 'o', name: 'orange' },
+      { key: 'b', name: 'blå' },
+      { key: 'y', name: 'gul' },
+      { key: 'p', name: 'lila' },
+      { key: 'c', name: 'cyan' },
+      { key: 'k', name: 'rosa' }
+    ];
+
+    const $ = id => document.getElementById(id);
+    const editor = $('editor');
+    const statusEl = $('status');
+    const paletteEl = $('palette');
+    const noteInput = $('note');
+    const paletteHelp = $('paletteHelp');
+    const autosaveStatus = $('autosaveStatus');
+    const lastSavedEl = $('lastSaved');
+
+    let currentColor = COLORS[0].key;
+    let markData = {}; // { "r|g|o|b|y|p|c|k": [{start, end, note}] }
+    let remoteLines = [];
+    let saveTimer = null;
+
+    // Use local browser storage as fallback, but primarily use in-memory marks synced to server.
+    function storage() {
+      try { return window.localStorage; } catch { return null; }
+    }
+
+    function buildPalette() {
+      paletteEl.innerHTML = '';
+      COLORS.forEach(c => {
+        const el = document.createElement('div');
+        el.className = 'chip' + (c.key === currentColor ? ' on' : '');
+        el.textContent = c.name;
+        el.addEventListener('click', () => {
+          currentColor = c.key;
+          buildPalette();
+          paletteHelp.textContent = 'Vald: ' + c.name + '. Markera text och spara.';
+        });
+        paletteEl.appendChild(el);
+      });
+    }
+
+    function textRange() {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return null;
+      return sel.getRangeAt(0);
+    }
+
+    function applyMark(color, note) {
+      const range = textRange();
+      if (!range || range.collapsed) {
+        paletteHelp.textContent = 'Markera text först (ej tomt urval).';
+        return;
+      }
+      // Store simple start/end offsets inside the editor text node
+      const preRange = document.createRange();
+      preRange.selectNodeContents(editor);
+      preRange.setEnd(range.startContainer, range.startOffset);
+      const start = preRange.toString().length;
+      const end = start + range.toString().length;
+      if (!markData[color]) markData[color] = [];
+      markData[color].push({ start, end, note: note || '' });
+      paletteHelp.textContent = 'Markerade ' + (end - start) + ' tecken i ' + getColorName(color) + '.';
+      renderMarks();
+      scheduleSave();
+    }
+
+    function getColorName(key) {
+      const c = COLORS.find(x => x.key === key);
+      return c ? c.name : key;
+    }
+
+    function renderMarks() {
+      // Rebuild editor text from marks to keep data source consistent
+      const text = editor.textContent || '';
+      // Create a simple markdown-like storage: spans with data attributes
+      editor.innerHTML = '';
+      // We rebuild spans for marked regions. For simplicity we rebuild whole text with marks as spans.
+      const sorted = [];
+      Object.keys(markData).forEach(color => {
+        (markData[color] || []).forEach(m => sorted.push({ color, start: m.start, end: m.end, note: m.note }));
+      });
+      sorted.sort((a, b) => a.start - b.start);
+      let cursor = 0;
+      const frag = document.createDocumentFragment();
+      sorted.forEach(m => {
+        if (m.start > cursor) {
+          frag.appendChild(document.createTextNode(text.slice(cursor, m.start)));
+        }
+        const span = document.createElement('span');
+        span.className = 'mark-' + m.color;
+        span.dataset.note = m.note || '';
+        span.textContent = text.slice(m.start, m.end);
+        frag.appendChild(span);
+        cursor = m.end;
+      });
+      if (cursor < text.length) frag.appendChild(document.createTextNode(text.slice(cursor)));
+      editor.appendChild(frag);
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('/mastertext');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        remoteLines = Array.isArray(data.lines) ? data.lines : [];
+        editor.textContent = remoteLines.join('\n');
+        statusEl.textContent = 'Uppkopplad. ' + remoteLines.length + ' rader.';
+        loadMarksFromStorage();
+      } catch (e) {
+        statusEl.textContent = 'Kunde inte ladda: ' + e.message;
+      }
+      buildPalette();
+      startAutosave();
+    }
+
+    async function save() {
+      try {
+        const lines = (editor.textContent || '').split(/\r?\n/);
+        const res = await fetch('/mastertext', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lines })
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        statusEl.textContent = 'Sparad.';
+        lastSavedEl.textContent = 'Senast sparad: ' + new Date().toLocaleTimeString();
+        remoteLines = lines;
+      } catch (e) {
+        statusEl.textContent = 'Sparfel: ' + e.message;
+      }
+    }
+
+    function scheduleSave() {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(save, 800);
+    }
+
+    function startAutosave() {
+      autosaveStatus.textContent = 'på';
+      editor.addEventListener('input', () => { statusEl.textContent = 'Ändringar…'; scheduleSave(); });
+      editor.addEventListener('mouseup', () => {
+        const sel = window.getSelection();
+        if (sel && sel.toString().trim().length > 0) {
+          paletteHelp.textContent = 'Text markerad. Tryck Spara för att fästa markeringen.';
+        }
+      });
+    }
+
+    function saveMarksToStorage() {
+      const s = storage();
+      if (!s) return;
+      try { s.setItem('baloo.marks', JSON.stringify(markData)); } catch {}
+    }
+
+    function loadMarksFromStorage() {
+      const s = storage();
+      if (!s) return;
+      try {
+        const raw = s.getItem('baloo.marks');
+        if (raw) markData = JSON.parse(raw);
+      } catch {}
+    }
+
+    $('btnSave').addEventListener('click', async () => {
+      await save();
+      saveMarksToStorage();
+    });
+
+    $('btnReset').addEventListener('click', async () => {
+      if (!confirm('Nollställer text och lokala markeringar. Fortsätta?')) return;
+      editor.textContent = '';
+      markData = {};
+      await save();
+      saveMarksToStorage();
+      statusEl.textContent = 'Återställt.';
+    });
+
+    load();
+  </script>
+</body>
+</html>

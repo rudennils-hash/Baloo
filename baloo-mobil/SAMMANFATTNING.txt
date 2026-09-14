@@ -1,0 +1,93 @@
+BALOO MOBIL – SAMMANFATTNING OCH GUIDE
+=======================================
+
+SYFTE
+-----
+Bygga en mobilapp/PWA som kan jobba mot SAMMA mastertext.txt som Electron-appen.
+Du ska kunna:
+- Färgmarkera text i mobilappen
+- Spara automatiskt (autosave) så markeringarna och texten består
+- Jobba i både telefon och dator samtidigt med samma fil
+- Se ändringar i realtid på båda platserna
+
+Filerna vi skapat
+-----------------
+1. baloo-mobil/package.json
+   - Node.js-projektkonfiguration
+   - Definerar vilka paket som behövs (express)
+
+2. baloo-mobil/src/index.js
+   - Backend-server med Express
+   - API-endpoints:
+     * GET /mastertext - hämtar mastertext.txt
+     * POST /mastertext - sparar mastertext.txt
+     * GET /markings - hämtar färgmarkeringar
+     * POST /markings - sparar färgmarkeringar
+   - Skapar automatiskt mastertext.txt och markings.json om de inte finns
+
+3. baloo-mobil/src/public/index.html
+   - Frontend (PWA) med textredigerare och färgmarkering
+   - Färgpalett (röd, grön, orange, blå, gul, lila, cyan, rosa)
+   - Autosave-funktion (sparar efter 800ms inaktivitet)
+   - Lagrar markeringar lokalt och synkroniserar med servern
+
+4. baloo-mobil/package-lock.json
+   - Skapades automatiskt av npm install
+   - Spärrar exakta versioner av beroenden
+
+NÄSTA STEG – SÅ HÄR KOMMER DU IGÅNG
+------------------------------------
+
+1. Installera beroenden
+   cd baloo-mobil
+   npm install
+
+2. Starta servern
+   node src/index.js
+   (eller: npm start)
+
+3. Gör servern publik så mobilen kan nå den
+   Alternativ A – ngrok (enkelt):
+   npm i -g ngrok
+   ngrok http 3000
+   Kopiera HTTPS-URL:en (t.ex. https://abc123.ngrok.io)
+
+   Alternativ B – localtunnel:
+   npx localtunnel --port 3000
+
+4. Öppna i mobilen
+   - I Chrome/Safari: gå till HTTPS-URL:en från steg 3
+   - Klicka "Lägg till på hemskärmen" för PWA-installation
+   - Nu har du en app-ikon som en vanlig mobilapp
+
+5. Testa synkronisering
+   - Öppna Electron-appen (mastertext.txt i samma katalog)
+   - Skriv text och spara i Electron
+   - Kolla mobilappen – samma text ska visas
+   - Markera text i mobilappen med färgpalett
+   - Spara – markeringarna sparas i markings.json
+   - Uppdatera Electron-appen – markeringarna ska finnas kvar
+
+VIKTIGT ATT VETA
+----------------
+- Electron-appen och mobilappen körs HELT separat
+- De delar ENDAST mastertext.txt och markings.json i samma katalog
+- Om du ändrar kod i den ena påverkar det INTE den andra
+- Färgmarkeringar sparas i markings.json (inte i mastertext.txt)
+- Autosave sker automatiskt när du slutar skriva/redigera
+
+TEKNISK ÖVERSIKT
+----------------
+- Backend: Express.js på Node.js (port 3000)
+- Frontend: HTML/CSS/JavaScript (PWA)
+- Lagring: Lokala filer (mastertext.txt, markings.json)
+- Synk: HTTP GET/POST med JSON
+- Realtid: Uppdatera manuellt eller via autosave (800ms)
+
+KOMMANDE FÖRBÄTTRINGAR (OM DU VILL)
+------------------------------------
+- Realtids-synk via WebSockets eller polling
+- Versionshantering för att undvika konflikter
+- Fler färger och anteckningsmöjligheter per markering
+- Export/import av markeringar
+- Kryptering av API-endpoints

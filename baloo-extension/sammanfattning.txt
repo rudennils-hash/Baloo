@@ -1,0 +1,125 @@
+BALOO SELF-BUILDING AGENT – SAMMANFATTNING & NÄSTA STEG
+======================================================
+
+ÖVERSIKT
+--------
+Baloo är en VS Code/VSCodium-extension som fungerar både som
+språkmodell och som självständig agent. Den aktuella
+implementationen ger dig:
+
+* En webview-panel där du kan skriva prompts och få svar.
+* En grundmotor (BalooCore) som skapar och kör en steg-för-steg-plan.
+* Ett verktygsregister (ToolRegistry) med färdiga verktyg:
+  - FileSystemTool  – läsa/skriva/lista filer.
+  - CodeExecutorTool – köra TypeScript/JavaScript-kodsnuttar.
+  - WebSearchTool  – (platshållare, kan utökas).
+* En OllamaProvider som pratar med en lokalt-körd Ollama-modell
+  (gratis, obegränsad användning).
+* En MemoryStore som sparar upplevelser (prompt, plan, resultat,
+  reflektion) i filen memory.json.
+* En SelfBuilder som kan läsa sin egen källkod, analysera den,
+  generera förbättringsförslag och (i en prototyp) applicera dem.
+
+SKAPADE FILER
+-------------
+- baloo-extension/package.json
+  – Extension-manifest, skript, beroenden.
+- baloo-extension/tsconfig.json
+  – TypeScript-kompilatorinställningar.
+- baloo-extension/src/extension.ts
+  – Aktivering, kommando-registrering, webview-panel.
+- baloo-extension/src/balooCore.ts
+  – Orkestrator som kör planen och hanterar fel.
+- baloo-extension/src/tools/baseTool.ts
+  – Gränssnitt/basklass för alla verktyg.
+- baloo-extension/src/tools/toolRegistry.ts
+  – Register som håller och utför verktyg.
+- baloo-extension/src/tools/fileSystemTool.ts
+  – Filoperationer (läsa, skriva, lista, kontrollera).
+- baloo-extension/src/tools/codeExecutorTool.ts
+  – Kör TypeScript/JavaScript-kodsnuttar.
+- baloo-extension/src/memory/memoryStore.ts
+  – Beständig lagring av upplevelser.
+- baloo-extension/src/providers/ollamaProvider.ts
+  – Wrapper runt Ollama-API:t.
+- baloo-extension/src/selfBuilder.ts
+  – Läser egen kod, analyserar, föreslår självförbättring.
+- baloo-extension/src/planner/planner.ts
+  – Skapar planer utifrån prompts, upptäcker nödvändiga verktyg,
+    innehåller steg för självförbättring.
+
+HUR DET FUNGERAR (hög nivå)
+---------------------------
+1. Användaren kör kommandot "Baloo: Show Assistant Panel".
+2. extension.ts skapar en WebviewPanel och kopplar meddelanden
+   (ask, addProvider).
+3. När användaren skickar en prompt anropas BalooCore.execute().
+4. Planner.createPlan() analyserar prompten, upptäcker nödvändiga
+   verktyg och bygger ett Plan-objekt med ordnade PlanStep.
+5. BalooCore.executeStep() kör varje steg:
+   - tool          → ToolRegistry.execute() → konkret verktyg.
+   - code          → CodeExecutorTool kör kodsnutten och returnerar
+                     utdata.
+   - build         → SelfBuilder bygger nya verktyg eller ändrar
+                     befintliga.
+   - self-improve  → SelfBuilder läser egen kod, frågar Ollama om
+                     förbättringsförslag och (i en prototyp) loggar
+                     ändringarna.
+6. Efter varje steg genereras en reflektion (via Ollama) och sparas
+   i MemoryStore.
+7. Det slutgiltiga svaret sammanställs och skickas tillbaka till
+   webview-panelen.
+
+NÄSTA STEG
+----------
+1. Full självförbättrings-loop
+   - Ersätt demo-metoden applyImprovements i SelfBuilder med riktiga
+     vscode.workspace.edit-anrop så att Baloo faktiskt kan redigera
+     sina egna .ts-filer (lägga till kommentarer, refaktorera, fixa
+     buggar).
+   - Spara diffen eller en patch i minnet så att ändringarna
+     överlever en omstart.
+
+2. Dynamisk provider-registrering
+   - Implementera en UI-del (quick-pick eller inmatningsruta) så att
+     användaren kan lägga till en ny provider i farten.
+   - Skapa ett enkelt gränssnitt (ProviderRegistry) som kan ladda en
+     klass från en fil eller instansiera en inbyggd provider
+     (t.ex. OpenAI, GoogleMaps, custom REST-API).
+
+3. Robust felhantering & retry-logik
+   - Lägg till exponentiell back-off för nätverksanrop (Ollama,
+     externa API:er).
+   - Upptäck verktygsspecifika fel (t.ex. fil hittades inte) och
+     försök automatiskt eller föreslå alternativa åtgärder.
+
+4. Förbättrad planner
+   - Ersätt den nyckelordsbaserade detectTools med en mer intelligent
+     LLM-driven analys som kan sluta sig till nödvändigt verktyg från
+     naturligt språk.
+   - Lägg till stöd för multi-stegs kodgenerering (t.ex. generera en
+     hel modul, sedan köra tester).
+
+5. Testning & CI
+   - Skriv enhetstester för ToolRegistry, Planner och SelfBuilder med
+     Jest.
+   - Sätt upp ett GitHub Actions-flöde som kör npm run compile och
+     testerna vid varje push.
+
+6. Dokumentation & UI-polering
+   - Lägg till Markdown-dokumentation i panelen (användningsexempel,
+     kortkommandon).
+   - Styla webviewen med ett mörkt tema och responsiv layout.
+
+7. Prestandaoptimering
+   - Cacha Ollama-svar för återkommande prompts.
+   - Begränsa storleken på filer som FileSystemTool läser för att
+     undvika minnespikar.
+
+När dessa steg är klara kommer Baloo att kunna läsa sin egen kod,
+förbättra sin egen kod, minnas tidigare beteende och dynamiskt utöka
+sin verktygslåda – vilket uppfyller kravet att det kan "bygga sig
+själv och bygga appar".
+
+---
+*Slut på sammanfattning.*

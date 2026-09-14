@@ -1,0 +1,78 @@
+﻿version: "3.8"
+
+services:
+  # ---------- CODE‑SERVER (VS Code in browser) ----------
+  codeserver:
+    image: codercom/code-server:4.96.3
+    container_name: codeserver
+    ports:
+      - "8080:8080"
+    environment:
+      - PASSWORD=
+    volumes:
+      - ./workspace:/home/coder/project
+      - codeserver_data:/home/coder/.local
+    restart: unless-stopped
+    shm_size: 256m
+
+  # ---------- GITEA (self‑hosted Git) ----------
+  gitea:
+    image: gitea/gitea:1.22.4
+    container_name: gitea
+    ports:
+      - "3000:3000"
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+    volumes:
+      - ./gitea:/data
+      - /etc/timezone:/etc/timezone:ro
+    restart: unless-stopped
+
+  # ---------- MINIO (S3‑compatible storage) ----------
+  minio:
+    image: minio/minio:RELEASE.2024-10-29T16-01-48Z
+    container_name: minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=
+      - MINIO_ROOT_PASSWORD=
+    volumes:
+      - ./minio:/data
+    restart: unless-stopped
+
+  # ---------- THE LOUNGE (IRC/web chat) ----------
+  thelounge:
+    image: thelounge/thelounge:v4.4.2
+    container_name: thelounge
+    ports:
+      - "8081:9000"
+    environment:
+      - TZ=Europe/Stockholm
+    volumes:
+      - ./thelounge:/var/opt/thelounge
+    restart: unless-stopped
+
+  # ---------- CADDY (reverse proxy + automatic HTTPS) ----------
+  caddy:
+    image: caddy:2.8.0-alpine
+    container_name: caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  codeserver_data:
+  gitea_data:
+  minio_data:
+  thelounge_data:
+  caddy_data:
+  caddy_config:
