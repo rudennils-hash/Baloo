@@ -1,28 +1,24 @@
-﻿app = "vgds"
+app = "vgds"
 primary_region = "arn"
 
 [build]
-dockerfile = "Dockerfile"
-
-[env]
-NODE_ENV = "production"
-PORT = "3000"
+  dockerfile = "Dockerfile"
 
 [http_service]
-internal_port = 3000
-force_https = true
-auto_stop_machines = true
-auto_start_machines = true
-min_machines_running = 0
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
 
-[[services]]
-internal_port = 8080
-protocol = "tcp"
+  [[http_service.ports]]
+    port = 80
+    force_https = true
 
-[[services.ports]]
-port = 80
-handlers = ["http"]
+  [[http_service.ports]]
+    port = 443
 
-[[services.ports]]
-port = 443
-handlers = ["tls", "http"]
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"

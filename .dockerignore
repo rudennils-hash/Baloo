@@ -1,0 +1,17 @@
+# Håll build-kontexten liten
+.git
+node_modules
+**/node_modules
+dist
+out
+build
+release
+*.log
+mastertext.txt
+baloo-backup-kod.zip
+*.tar.gz
+secrets
+.env
+.env.*
+*.key
+oracle-move-kit/baloo-backup-*.tar.gz
