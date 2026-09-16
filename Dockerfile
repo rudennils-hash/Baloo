@@ -1,5 +1,5 @@
 # Baloo cloud IDE – code-server (VS Code i webbläsaren)
-FROM codercom/code-server:4.96.3
+FROM codercom/code-server:4.137.0
 
 # ---- Seed-inställningar sparas på annan plats (kopieras till volym vid första start) ----
 COPY --chown=coder:coder codeserver_user_data/ /home/coder/seed/
