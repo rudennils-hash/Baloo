@@ -12,4 +12,6 @@ COPY --chown=coder:coder baloo-logga /home/coder/project/baloo-logga
 COPY --chown=coder:coder Baloo-VgdsApp /home/coder/project/Baloo-VgdsApp
 COPY --chown=coder:coder README.md LICENSE docker-compose.yml fly.toml /home/coder/project/
 
+COPY --chown=coder:coder codeserver_config.json /home/coder/.local/code-server/config.yaml
+
 # code-server-image:startar redan code-server på 0.0.0.0:8080 med PASSWORD-env
