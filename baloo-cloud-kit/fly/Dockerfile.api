@@ -1,20 +1,16 @@
-# Baloo API – Fly.io
-FROM node:20-slim
+# Baloo API-service – Node.js
+# OBS: Detta är endast en API-tjänstmall. Baloo-projektet har ingen färdig
+# server-entrypoint än – ersätt "node dist/api.js" med rätt startkommando
+# när API:et byggs.
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Installera dependencies
+# Krävs byggkontext = repots root (peka på rätt mapp för API:et)
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev || true
 
-# Kopiera källkod
 COPY . .
 
-# Bygg om det behövs
-RUN npm run build
-
-# Exponera port
-EXPOSE 3000
-
-# Starta
-CMD ["npm", "start"]
+EXPOSE 8080
+CMD ["node", "dist/api.js"]

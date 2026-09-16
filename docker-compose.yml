@@ -1,21 +1,25 @@
-﻿version: "3.8"
+# Baloo lokal test-stack (Docker Compose)
+# OBS: Produktion körs på Fly.io – se fly.toml i roten.
 
 services:
-  # ---------- CODE‑SERVER (VS Code in browser) ----------
+  # ---------- CODE-SERVER (VS Code i webbläsaren) ----------
   codeserver:
-    image: codercom/code-server:4.96.3
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: baloo-codeserver:latest
     container_name: codeserver
     ports:
       - "8080:8080"
     environment:
-      - PASSWORD=
+      # Sätt PASSWORD i .env eller i shell:  $env:PASSWORD="..." ; docker compose up
+      - PASSWORD=${PASSWORD:-}
     volumes:
-      - ./workspace:/home/coder/project
       - codeserver_data:/home/coder/.local
     restart: unless-stopped
     shm_size: 256m
 
-  # ---------- GITEA (self‑hosted Git) ----------
+  # ---------- GITEA (self-hosted Git) ----------
   gitea:
     image: gitea/gitea:1.22.4
     container_name: gitea
@@ -25,11 +29,11 @@ services:
       - USER_UID=1000
       - USER_GID=1000
     volumes:
-      - ./gitea:/data
+      - gitea_data:/data
       - /etc/timezone:/etc/timezone:ro
     restart: unless-stopped
 
-  # ---------- MINIO (S3‑compatible storage) ----------
+  # ---------- MINIO (S3-kompatibel lagring) ----------
   minio:
     image: minio/minio:RELEASE.2024-10-29T16-01-48Z
     container_name: minio
@@ -38,13 +42,13 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      - MINIO_ROOT_USER=
-      - MINIO_ROOT_PASSWORD=
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-baloo}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-baloo12345}
     volumes:
-      - ./minio:/data
+      - minio_data:/data
     restart: unless-stopped
 
-  # ---------- THE LOUNGE (IRC/web chat) ----------
+  # ---------- THE LOUNGE (IRC/webb-chat) ----------
   thelounge:
     image: thelounge/thelounge:v4.4.2
     container_name: thelounge
@@ -53,20 +57,21 @@ services:
     environment:
       - TZ=Europe/Stockholm
     volumes:
-      - ./thelounge:/var/opt/thelounge
+      - thelounge_data:/var/opt/thelounge
     restart: unless-stopped
 
-  # ---------- CADDY (reverse proxy + automatic HTTPS) ----------
+  # ---------- CADDY (reverse proxy, port 80 -> code-server) ----------
   caddy:
     image: caddy:2.8.0-alpine
     container_name: caddy
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    depends_on:
+      - codeserver
     restart: unless-stopped
 
 volumes:

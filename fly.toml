@@ -9,7 +9,7 @@ primary_region = "arn"
   force_https = true
   auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
   processes = ["app"]
 
   [[http_service.ports]]
@@ -22,3 +22,8 @@ primary_region = "arn"
 [[vm]]
   size = "shared-cpu-1x"
   memory = "1gb"
+
+# --- Persistent volym för settings + extensions (så de överlever omstart) ---
+[[mounts]]
+  source = "baloo_data"
+  destination = "/home/coder/.local"

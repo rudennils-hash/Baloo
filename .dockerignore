@@ -2,10 +2,11 @@
 .git
 node_modules
 **/node_modules
-dist
-out
-build
-release
+# OBS: dist/out/build exkluderas ENDAST på rotnivå – inte i underprojekt
+# (extension/dist innehåller kompilerad kod som behövs i bilden)
+/dist
+/out
+/build
 *.log
 mastertext.txt
 baloo-backup-kod.zip

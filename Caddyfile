@@ -1,0 +1,7 @@
+# Caddy – reverse proxy för lokal test-stack (Docker Compose)
+# Liten, enkel konfig: port 80 -> code-server:8080
+
+:80 {
+	reverse_proxy codeserver:8080
+	encode gzip
+}
